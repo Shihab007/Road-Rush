@@ -8,6 +8,10 @@ public class RoadScroller : MonoBehaviour
     public Transform tileA;
     public Transform tileB;
 
+    [Header("Tuning")]
+    [Tooltip("Increase this if you see a gap between tiles")]
+    public float tileOverlap = 0.1f;
+
     private float tileHeight;
     private Transform[] tiles;
 
@@ -26,6 +30,7 @@ public class RoadScroller : MonoBehaviour
             return;
         }
 
+        // Use renderer bounds which accounts for scale
         SpriteRenderer sr = tileA.GetComponent<SpriteRenderer>();
         tileHeight = sr.bounds.size.y;
 
@@ -43,13 +48,18 @@ public class RoadScroller : MonoBehaviour
         {
             tile.position += Vector3.down * moveAmount;
 
-            float tileTop = tile.position.y + (tileHeight * 0.5f);
+            float tileTop   = tile.position.y + (tileHeight * 0.5f);
             float camBottom = Camera.main.transform.position.y - Camera.main.orthographicSize;
 
             if (tileTop < camBottom)
             {
                 float highestY = GetHighestTileY();
-                tile.position = new Vector3(tile.position.x, highestY + tileHeight, tile.position.z);
+                // Subtract overlap to close any gap between tiles
+                tile.position = new Vector3(
+                    tile.position.x,
+                    highestY + tileHeight - tileOverlap,
+                    tile.position.z
+                );
             }
         }
     }
@@ -62,11 +72,10 @@ public class RoadScroller : MonoBehaviour
         return highest;
     }
 
-    // Called on soft reset — snap tiles back to start
     public void ResetTiles()
     {
         if (tiles == null) return;
         tileA.position = new Vector3(0f, 0f, 0f);
-        tileB.position = new Vector3(0f, tileHeight, 0f);
+        tileB.position = new Vector3(0f, tileHeight - tileOverlap, 0f);
     }
 }
