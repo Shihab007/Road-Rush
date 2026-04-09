@@ -5,17 +5,18 @@ public class ObstacleSpawner : MonoBehaviour
 {
     public static ObstacleSpawner Instance;
 
-    [Header("Prefabs — add all obstacle types here")]
-    public GameObject[] obstaclePrefabs;   // <-- drag all 3 prefabs here
+    [Header("Prefabs")]
+    public GameObject[] obstaclePrefabs;
 
     [Header("Spawn Settings")]
-    public float spawnY = 7f;
-    public float minInterval = 0.5f;
+    public float spawnY       = 7f;
+    public float minInterval  = 0.5f;
     public float startInterval = 2.5f;
 
-    private float[] lanes = { -2.3f, 0f, 2.3f };
-    private float timer = 0f;
+    [Header("Lanes — X positions only, no center")]
+    public float[] lanes = { -2.3f, 2.3f };
 
+    private float timer = 0f;
     private List<GameObject> activeObstacles = new List<GameObject>();
 
     void Awake()
@@ -44,12 +45,11 @@ public class ObstacleSpawner : MonoBehaviour
             return;
         }
 
-        // Pick a random lane and a random obstacle prefab
-        int laneIndex     = Random.Range(0, lanes.Length);
-        int prefabIndex   = Random.Range(0, obstaclePrefabs.Length);
+        int laneIndex   = Random.Range(0, lanes.Length);
+        int prefabIndex = Random.Range(0, obstaclePrefabs.Length);
 
-        Vector3 spawnPos  = new Vector3(lanes[laneIndex], spawnY, 0f);
-        GameObject obs    = Instantiate(obstaclePrefabs[prefabIndex], spawnPos, Quaternion.identity);
+        Vector3 spawnPos = new Vector3(lanes[laneIndex], spawnY, 0f);
+        GameObject obs   = Instantiate(obstaclePrefabs[prefabIndex], spawnPos, Quaternion.identity);
         activeObstacles.Add(obs);
     }
 
