@@ -8,16 +8,15 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
 
-    [Header("Song (loaded from file or fallback)")]
+    [Header("Song")]
     public AudioClip fallbackClip;
 
     [Header("SFX")]
-    public AudioClip engineSound;   // looping car rumble
-    public AudioClip crashSound;    // one-shot on collision
+    public AudioClip engineSound;
+    public AudioClip crashSound;
 
     private AudioSource songSource;
     private AudioSource sfxSource;
-
     private float loadedDuration = 60f;
 
     public float SongDuration => loadedDuration;
@@ -28,12 +27,10 @@ public class AudioManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
 
-        // Song source — existing AudioSource on this GameObject
         songSource             = GetComponent<AudioSource>();
         songSource.loop        = false;
         songSource.playOnAwake = false;
 
-        // SFX source — second AudioSource added in code
         sfxSource             = gameObject.AddComponent<AudioSource>();
         sfxSource.loop        = false;
         sfxSource.playOnAwake = false;
@@ -46,45 +43,49 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-#if UNITY_WEBGL && !UNITY_EDITOR
+    // No DllImport — JS is called via jslib which Unity links automatically
+    #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
     private static extern void OpenAudioFilePicker();
-#endif
+    #endif
 
     public void RequestFilePicker()
     {
-#if UNITY_WEBGL && !UNITY_EDITOR
-        OpenAudioFilePicker();
-#else
-        if (fallbackClip != null)
-        {
-            songSource.clip = fallbackClip;
-            loadedDuration  = fallbackClip.length;
-            SongReady       = true;
-            UIManager.Instance.OnSongReady(loadedDuration);
-        }
-        else
-        {
-            Debug.Log("AudioManager: Assign a fallback clip to test in Editor.");
-        }
-#endif
+        #if UNITY_WEBGL && !UNITY_EDITOR
+            OpenAudioFilePicker();
+        #else
+            // Editor fallback — use assigned clip
+            if (fallbackClip != null)
+            {
+                songSource.clip = fallbackClip;
+                loadedDuration  = fallbackClip.length;
+                SongReady       = true;
+                UIManager.Instance.OnSongReady(loadedDuration);
+            }
+        #endif
     }
 
-    // Called by JS via SendMessage
+    // Called by JS via SendMessage('_Managers', 'OnAudioFileLoaded', payload)
     public void OnAudioFileLoaded(string payload)
     {
-        if (payload.StartsWith("ERROR"))
+        if (string.IsNullOrEmpty(payload) || payload.StartsWith("ERROR"))
         {
             UIManager.Instance.OnSongError();
             return;
         }
 
-        string[] parts   = payload.Split('|');
-        string   url     = parts[0];
-        float    duration = float.Parse(parts[1],
-                            System.Globalization.CultureInfo.InvariantCulture);
+        string[] parts = payload.Split('|');
+        if (parts.Length < 2)
+        {
+            UIManager.Instance.OnSongError();
+            return;
+        }
 
-        loadedDuration = duration;
+        string url      = parts[0];
+        float duration  = float.Parse(parts[1],
+                          System.Globalization.CultureInfo.InvariantCulture);
+
+        loadedDuration  = duration;
         StartCoroutine(LoadClip(url));
     }
 
@@ -99,6 +100,7 @@ public class AudioManager : MonoBehaviour
 
             if (www.result != UnityWebRequest.Result.Success)
             {
+                Debug.LogError("AudioManager: " + www.error);
                 UIManager.Instance.OnSongError();
                 yield break;
             }
@@ -109,15 +111,12 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    // --- Song controls ---
-
     public void PlaySong()
     {
         if (songSource.clip == null) return;
         songSource.Stop();
         songSource.time = 0f;
         songSource.Play();
-
         PlayEngine();
     }
 
@@ -126,8 +125,6 @@ public class AudioManager : MonoBehaviour
         songSource.Stop();
         StopEngine();
     }
-
-    // --- Engine sound ---
 
     public void PlayEngine()
     {
@@ -142,8 +139,6 @@ public class AudioManager : MonoBehaviour
         if (sfxSource.isPlaying && sfxSource.loop)
             sfxSource.Stop();
     }
-
-    // --- Crash sound ---
 
     public void PlayCrash()
     {
