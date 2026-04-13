@@ -78,7 +78,7 @@ public class UIManager : MonoBehaviour
 
     public void ShowGameOver()
     {
-        finalScoreText.text = "SCORE  " + GameManager.Instance.Score.ToString("D5");
+        finalScoreText.text = "SCORE " + GameManager.Instance.Score.ToString("D5");
         gameOverPanel.SetActive(true);
         StartCoroutine(FadeInGameOver());
     }
